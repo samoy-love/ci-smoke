@@ -1,0 +1,33 @@
+# Проверка self-hosted раннера. Запускается только вручную и ничего не выкатывает.
+name: smoke
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Где мы и на чём
+        run: |
+          echo "хост:  $(hostname)"
+          echo "ядер:  $(nproc), память: $(free -g | awk '/Mem:/{print $2}') ГБ"
+          echo "арх:   $(uname -m)"
+
+      - name: Кэш должен переживать откат
+        run: |
+          echo "запусков до этого: $(cat /cache/smoke-counter 2>/dev/null || echo 0)"
+          echo $(( $(cat /cache/smoke-counter 2>/dev/null || echo 0) + 1 )) > /cache/smoke-counter
+          echo "стало: $(cat /cache/smoke-counter)"
+
+      - name: Изоляция от домашней сети
+        run: |
+          timeout 4 bash -c '</dev/tcp/192.168.1.10/22' 2>/dev/null && echo "web:22 доступен — так и надо" || echo "web:22 НЕДОСТУПЕН"
+          timeout 4 bash -c '</dev/tcp/192.168.1.1/80' 2>/dev/null && echo "роутер:80 доступен — ДЫРА" || echo "роутер закрыт — так и надо"
+          ping -c1 -W2 192.168.1.162 >/dev/null 2>&1 && echo "ТВ доступен — ДЫРА" || echo "остальная LAN закрыта — так и надо"
+
+      - name: Метка, которая должна исчезнуть после отката
+        run: |
+          date > "$HOME/should-vanish"
+          ls -l "$HOME/should-vanish"
