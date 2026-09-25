@@ -5,7 +5,9 @@ on:
 
 jobs:
   check:
-    runs-on: self-hosted
+    # Набор своих больших раннеров Runner Scale Set (с 25.09.2026). Голая
+    # метка self-hosted подходила бы и Windows-машине, где эти шаги не идут.
+    runs-on: home-heavy
     steps:
       - uses: actions/checkout@v4
 
